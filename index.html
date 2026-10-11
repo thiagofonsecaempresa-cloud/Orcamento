@@ -201,11 +201,13 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
     const capacity = tRooms*3 + dRooms*2;
     const tPeople = selectedCombo && Number.isInteger(selectedCombo.triplePeople) ? selectedCombo.triplePeople : Math.min(g, tRooms*3);
     const dPeople = selectedCombo && Number.isInteger(selectedCombo.doublePeople) ? selectedCombo.doublePeople : Math.min(Math.max(0, g - tPeople), dRooms*2);
-    const tRoomsUsed = selectedCombo ? tRooms : Math.min(tRooms, Math.ceil(tPeople/3));
-    const dRoomsUsed = selectedCombo ? dRooms : Math.min(dRooms, Math.ceil(dPeople/2));
+    const tRoomsUsed = Math.min(tRooms, Math.ceil(tPeople/3));
+    const dRoomsUsed = Math.min(dRooms, Math.ceil(dPeople/2));
+    // Capacity is based on the rooms actually needed for the selected guest distribution.
+    const actualCapacity = tRoomsUsed*3 + dRoomsUsed*2;
     const tTotal = tPeople * tr * n;
     const dTotal = dPeople * dr * n;
-    return {g,n,tr,dr,availableT,availableD,tRooms,dRooms,tRoomsUsed,dRoomsUsed,capacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
+    return {g,n,tr,dr,availableT,availableD,tRooms,dRooms,tRoomsUsed,dRoomsUsed,capacity:actualCapacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
       tPerson:tr*n,dPerson:dr*n,tRoom:tr*3*n,dRoom:dr*2*n};
   }
   function tableRows(c){
@@ -308,9 +310,13 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
         const doublePeople = g - triplePeople;
         if((t===0 && triplePeople!==0) || (d===0 && doublePeople!==0)) continue;
         const total = (triplePeople*tr + doublePeople*dr)*n;
-        const rooms = t+d;
-        const unusedSeats = cap-g;
-        combos.push({t,d,cap,rooms,total,unusedSeats,triplePeople,doublePeople});
+        const usedT = Math.ceil(triplePeople/3);
+        const usedD = Math.ceil(doublePeople/2);
+        const usedCap = usedT*3 + usedD*2;
+        const rooms = usedT + usedD;
+        const unusedSeats = usedCap-g;
+        // Store only the rooms actually needed, not extra rooms available in the hostel.
+        combos.push({t:usedT,d:usedD,cap:usedCap,rooms,total,unusedSeats,triplePeople,doublePeople});
       }
     }
     combos.sort((a,b)=>a.total-b.total || a.rooms-b.rooms || a.unusedSeats-b.unusedSeats || b.tr-a.tr);
