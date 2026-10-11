@@ -119,8 +119,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
             <div class="field"><label for="checkin">Data de entrada *</label><input id="checkin" type="date" required></div>
             <div class="field"><label for="checkout">Data de saída *</label><input id="checkout" type="date" required></div>
             <div class="field"><label for="guests">Quantidade de hóspedes *</label><input id="guests" type="number" min="1" step="1" value="6" required></div>
-            <div class="field"><label for="tripleRooms">Suítes triplas disponíveis</label><input id="tripleRooms" type="number" min="0" step="1" value="2" required></div>
-            <div class="field"><label for="doubleRooms">Suítes duplas disponíveis</label><input id="doubleRooms" type="number" min="0" step="1" value="0" required></div>
+            <div class="field"><label for="tripleRooms">Quantidade de suítes triplas no orçamento</label><input id="tripleRooms" type="number" min="0" step="1" value="2" required></div>
+            <div class="field"><label for="doubleRooms">Quantidade de suítes duplas no orçamento</label><input id="doubleRooms" type="number" min="0" step="1" value="0" required></div>
             <div class="field"><label for="arrival">Horário de entrada</label><input id="arrival" value="a partir das 13h"></div>
             <div class="field full"><label for="notes">Observações do orçamento</label><textarea id="notes" placeholder="Ex.: horário previsto de chegada, necessidade de nota fiscal..."></textarea></div>
           </div>
@@ -185,17 +185,20 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
     const tRooms = Math.max(0, parseInt(val('tripleRooms') || '0',10) || 0);
     const dRooms = Math.max(0, parseInt(val('doubleRooms') || '0',10) || 0);
     const capacity = tRooms*3 + dRooms*2;
-    // Allocate guests to triple suites first, then double suites, without exceeding room capacities.
+    // Allocate guests to the chosen room mix. Each guest is charged at the rate of the room type assigned.
+    // Fill triple rooms first, then doubles; unused selected rooms are surfaced as a warning.
     const tPeople = Math.min(g, tRooms*3);
-    const dPeople = Math.max(0, g - tPeople);
+    const dPeople = Math.min(Math.max(0, g - tPeople), dRooms*2);
+    const tRoomsUsed = Math.min(tRooms, Math.ceil(tPeople/3));
+    const dRoomsUsed = Math.min(dRooms, Math.ceil(dPeople/2));
     const tTotal = tPeople * tr * n;
     const dTotal = dPeople * dr * n;
-    return {g,n,tr,dr,tRooms,dRooms,capacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
+    return {g,n,tr,dr,tRooms,dRooms,tRoomsUsed,dRoomsUsed,capacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
       tPerson:tr*n,dPerson:dr*n,tRoom:tr*3*n,dRoom:dr*2*n};
   }
   function tableRows(c){
-    return `<tr><td><b>Suíte tripla</b></td><td>Até 3 pessoas</td><td>${c.tRooms}</td><td>${money(c.tr)}</td><td>${money(c.tPerson)}</td><td>${money(c.tRoom)}</td><td class="total">${money(c.tTotal)}</td></tr>
-    <tr><td><b>Suíte dupla</b></td><td>Até 2 pessoas</td><td>${c.dRooms}</td><td>${money(c.dr)}</td><td>${money(c.dPerson)}</td><td>${money(c.dRoom)}</td><td class="total">${money(c.dTotal)}</td></tr>
+    return `<tr><td><b>Suíte tripla</b></td><td>Até 3 pessoas</td><td>${c.tRoomsUsed} de ${c.tRooms} selecionada(s)</td><td>${money(c.tr)}</td><td>${money(c.tPerson)}</td><td>${money(c.tRoom)}</td><td class="total">${money(c.tTotal)}</td></tr>
+    <tr><td><b>Suíte dupla</b></td><td>Até 2 pessoas</td><td>${c.dRoomsUsed} de ${c.dRooms} selecionada(s)</td><td>${money(c.dr)}</td><td>${money(c.dPerson)}</td><td>${money(c.dRoom)}</td><td class="total">${money(c.dTotal)}</td></tr>
     <tr><td colspan="6" class="total">Total da combinação (${c.g} hóspede(s), ${c.n} diária(s))</td><td class="total">${money(c.total)}</td></tr>`;
   }
   function updatePreview(){
@@ -209,7 +212,8 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
     $('preview').innerHTML = `<h3>Orçamento • São Hostel ${esc(val('unit'))}</h3>
       <p class="sub">${esc(val('company') || val('client') || 'Cliente')} · ${datePt(val('checkin'))} a ${datePt(val('checkout'))}</p>
       <div class="summary"><div class="metric"><span>Hóspedes</span><strong>${c.g}</strong></div><div class="metric"><span>Capacidade</span><strong>${c.capacity}</strong></div><div class="metric"><span>Total estimado</span><strong>${money(c.total)}</strong></div></div>
-      <p class="preview-note">${c.tRooms} suíte(s) tripla(s) + ${c.dRooms} suíte(s) dupla(s) · ${c.n} diária(s)</p>
+      <p class="preview-note">Selecionadas: ${c.tRooms} tripla(s) + ${c.dRooms} dupla(s). Necessárias para a distribuição: ${c.tRoomsUsed} tripla(s) + ${c.dRoomsUsed} dupla(s) · ${c.n} diária(s)</p>
+      ${c.capacity > c.g ? `<p class="preview-note">Atenção: a combinação tem ${c.capacity} vagas para ${c.g} hóspedes; ${c.capacity-c.g} vaga(s) ficarão sem uso.</p>` : ''}
       <table><thead><tr><th>Opção</th><th>Capacidade</th><th>Quartos</th><th>Diária/pessoa</th><th>Total/pessoa</th><th>Total/quarto*</th><th>Total do grupo</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
       <p class="preview-note">* Total por quarto considera ocupação máxima. Total do grupo considera ${c.g} hóspede(s).</p>`;
   }
@@ -233,12 +237,12 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
       <p>Segue a proposta para hospedagem corporativa de colaboradores de <b>${esc(title)}</b> na unidade <b>São Hostel – ${esc(unit)}</b>.</p>
       ${company?`<p><b>Empresa:</b> ${esc(company)}</p>`:''}${cnpj?`<p><b>CNPJ:</b> ${esc(cnpj)}</p>`:''}${contact?`<p><b>Contato:</b> ${esc(contact)}</p>`:''}
       <h2>Detalhes da estadia</h2>
-      <ul><li><b>Unidade:</b> São Hostel – ${esc(unit)}</li><li><b>Entrada:</b> ${datePt(val('checkin'))}, ${esc(val('arrival') || 'a combinar')}</li><li><b>Saída:</b> ${datePt(val('checkout'))}</li><li><b>Duração:</b> ${c.n} diária(s)</li><li><b>Ocupação:</b> ${c.g} hóspede(s)</li><li><b>Suítes selecionadas:</b> ${c.tRooms} tripla(s) e ${c.dRooms} dupla(s)</li></ul>
+      <ul><li><b>Unidade:</b> São Hostel – ${esc(unit)}</li><li><b>Entrada:</b> ${datePt(val('checkin'))}, ${esc(val('arrival') || 'a combinar')}</li><li><b>Saída:</b> ${datePt(val('checkout'))}</li><li><b>Duração:</b> ${c.n} diária(s)</li><li><b>Ocupação:</b> ${c.g} hóspede(s)</li><li><b>Suítes necessárias:</b> ${c.tRoomsUsed} tripla(s) e ${c.dRoomsUsed} dupla(s)</li></ul>
       <h2>Serviços e estrutura</h2>
       <ul><li>Roupa de cama e banho, Wi-Fi e acesso à cozinha, sala de TV e área de lazer compartilhada.</li><li><b>Café da manhã:</b> não oferecemos serviço de café da manhã.</li><li><b>Limpeza e higienização:</b> troca de roupa de cama uma vez por semana e limpeza/arrumação completa do quarto duas vezes por semana.</li><li><b>Estacionamento:</b> não incluso.</li><li><b>Suíte tripla:</b> três camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li><li><b>Suíte dupla:</b> duas camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li></ul>
       <h2>Investimento estimado</h2>
       <table><thead><tr><th>Configuração</th><th>Capacidade</th><th>Quartos necessários</th><th>Diária/pessoa</th><th>Total/pessoa (${c.n} diárias)</th><th>Total/quarto (${c.n} diárias)</th><th>Total do grupo (${c.g} pessoas)</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
-      <p class="foot">Esta proposta considera a combinação de suítes selecionada conforme a disponibilidade informada. Para o cálculo do valor, os hóspedes são alocados primeiro nas suítes triplas e, em seguida, nas duplas. A distribuição final depende da confirmação do hostel.</p>
+      <p class="foot">Esta proposta considera a combinação de suítes selecionada conforme a disponibilidade informada. Para o cálculo do valor, os hóspedes são alocados primeiro nas suítes triplas e, em seguida, nas duplas. A tabela distingue as suítes informadas das efetivamente necessárias para acomodar o grupo. A distribuição final depende da confirmação do hostel.</p>
       <p class="foot"><b>Total estimado da combinação:</b> ${money(c.total)}</p>
       ${includeNfe?'<p><i>Este orçamento considera a emissão de nota fiscal eletrônica (NF-e) inclusa.</i></p>':''}
       ${notes?`<p><b>Observações:</b> ${esc(notes)}</p>`:''}
