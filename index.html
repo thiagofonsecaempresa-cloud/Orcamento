@@ -53,6 +53,13 @@ th{background:#edf2e8}
 .hidden{display:none!important}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px}
 #proposalPrint{display:none}
+.recommendations{margin-top:12px;border:1px solid var(--line);border-radius:11px;padding:12px;background:#f8faf5}
+.recommendations h3{margin:0 0 8px;font-size:14px;color:var(--dark)}
+.recommendation{display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-top:1px solid var(--line)}
+.recommendation:first-of-type{border-top:0}
+.recommendation input{width:18px;min-height:18px;margin:3px 0 0;flex:0 0 auto}
+.recommendation label{font-weight:500;font-size:13px;line-height:1.4;margin:0;flex:1}
+.recommendation strong{display:block;color:var(--dark);margin-bottom:2px}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.sticky{position:static}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:390px){.summary{grid-template-columns:1fr}.actions button{width:100%}}
 /* A impressão mostra somente o orçamento, nunca os campos internos do gerador. */
@@ -119,9 +126,13 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
             <div class="field"><label for="checkin">Data de entrada *</label><input id="checkin" type="date" required></div>
             <div class="field"><label for="checkout">Data de saída *</label><input id="checkout" type="date" required></div>
             <div class="field"><label for="guests">Quantidade de hóspedes *</label><input id="guests" type="number" min="1" step="1" value="6" required></div>
-            <div class="field"><label for="tripleRooms">Quantidade de suítes triplas no orçamento</label><input id="tripleRooms" type="number" min="0" step="1" value="2" required></div>
-            <div class="field"><label for="doubleRooms">Quantidade de suítes duplas no orçamento</label><input id="doubleRooms" type="number" min="0" step="1" value="0" required></div>
+            <div class="field"><label for="tripleRooms">Suítes triplas disponíveis</label><input id="tripleRooms" type="number" min="0" step="1" value="2" required></div>
+            <div class="field"><label for="doubleRooms">Suítes duplas disponíveis</label><input id="doubleRooms" type="number" min="0" step="1" value="0" required></div>
             <div class="field"><label for="arrival">Horário de entrada</label><input id="arrival" value="a partir das 13h"></div>
+            <div class="field full">
+              <div class="actions"><button type="button" class="secondary" id="recommendBtn">Sugerir combinações</button></div>
+              <div id="recommendations" class="recommendations hidden" aria-live="polite"></div>
+            </div>
             <div class="field full"><label for="notes">Observações do orçamento</label><textarea id="notes" placeholder="Ex.: horário previsto de chegada, necessidade de nota fiscal..."></textarea></div>
           </div>
           <p class="hint">As diárias são calculadas pela diferença entre entrada e saída. A saída precisa ser posterior à entrada.</p>
@@ -170,6 +181,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
   'use strict';
   const $ = id => document.getElementById(id);
   const ids = ['client','company','cnpj','contact','unit','validity','checkin','checkout','guests','tripleRooms','doubleRooms','arrival','notes','tripleRate','doubleRate','includeNfe','pix','cardTerms','customConditions'];
+  let selectedCombo = null;
   const val = id => String($(id).value || '').trim();
   const money = n => Number(n || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
   const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -182,24 +194,26 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
   function calc(){
     const g = Math.max(0, parseInt(val('guests') || '0',10) || 0);
     const n = nights(), tr = Math.max(0, Number(val('tripleRate') || 0)), dr = Math.max(0, Number(val('doubleRate') || 0));
-    const tRooms = Math.max(0, parseInt(val('tripleRooms') || '0',10) || 0);
-    const dRooms = Math.max(0, parseInt(val('doubleRooms') || '0',10) || 0);
+    const availableT = Math.max(0, parseInt(val('tripleRooms') || '0',10) || 0);
+    const availableD = Math.max(0, parseInt(val('doubleRooms') || '0',10) || 0);
+    const tRooms = selectedCombo ? selectedCombo.t : availableT;
+    const dRooms = selectedCombo ? selectedCombo.d : availableD;
     const capacity = tRooms*3 + dRooms*2;
-    // Allocate guests to the chosen room mix. Each guest is charged at the rate of the room type assigned.
-    // Fill triple rooms first, then doubles; unused selected rooms are surfaced as a warning.
     const tPeople = Math.min(g, tRooms*3);
     const dPeople = Math.min(Math.max(0, g - tPeople), dRooms*2);
     const tRoomsUsed = Math.min(tRooms, Math.ceil(tPeople/3));
     const dRoomsUsed = Math.min(dRooms, Math.ceil(dPeople/2));
     const tTotal = tPeople * tr * n;
     const dTotal = dPeople * dr * n;
-    return {g,n,tr,dr,tRooms,dRooms,tRoomsUsed,dRoomsUsed,capacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
+    return {g,n,tr,dr,availableT,availableD,tRooms,dRooms,tRoomsUsed,dRoomsUsed,capacity,tPeople,dPeople,tTotal,dTotal,total:tTotal+dTotal,
       tPerson:tr*n,dPerson:dr*n,tRoom:tr*3*n,dRoom:dr*2*n};
   }
   function tableRows(c){
-    return `<tr><td><b>Suíte tripla</b></td><td>Até 3 pessoas</td><td>${c.tRoomsUsed} de ${c.tRooms} selecionada(s)</td><td>${money(c.tr)}</td><td>${money(c.tPerson)}</td><td>${money(c.tRoom)}</td><td class="total">${money(c.tTotal)}</td></tr>
-    <tr><td><b>Suíte dupla</b></td><td>Até 2 pessoas</td><td>${c.dRoomsUsed} de ${c.dRooms} selecionada(s)</td><td>${money(c.dr)}</td><td>${money(c.dPerson)}</td><td>${money(c.dRoom)}</td><td class="total">${money(c.dTotal)}</td></tr>
-    <tr><td colspan="6" class="total">Total da combinação (${c.g} hóspede(s), ${c.n} diária(s))</td><td class="total">${money(c.total)}</td></tr>`;
+    const rows = [];
+    if(c.tPeople > 0) rows.push(`<tr><td><b>Suíte tripla</b></td><td>Até 3 pessoas</td><td>${c.tRoomsUsed}</td><td>${money(c.tr)}</td><td>${money(c.tPerson)}</td><td>${money(c.tRoom)}</td><td class="total">${money(c.tTotal)}</td></tr>`);
+    if(c.dPeople > 0) rows.push(`<tr><td><b>Suíte dupla</b></td><td>Até 2 pessoas</td><td>${c.dRoomsUsed}</td><td>${money(c.dr)}</td><td>${money(c.dPerson)}</td><td>${money(c.dRoom)}</td><td class="total">${money(c.dTotal)}</td></tr>`);
+    rows.push(`<tr><td colspan="6" class="total">Total da combinação (${c.g} hóspede(s), ${c.n} diária(s))</td><td class="total">${money(c.total)}</td></tr>`);
+    return rows.join('');
   }
   function updatePreview(){
     const c = calc();
@@ -212,8 +226,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
     $('preview').innerHTML = `<h3>Orçamento • São Hostel ${esc(val('unit'))}</h3>
       <p class="sub">${esc(val('company') || val('client') || 'Cliente')} · ${datePt(val('checkin'))} a ${datePt(val('checkout'))}</p>
       <div class="summary"><div class="metric"><span>Hóspedes</span><strong>${c.g}</strong></div><div class="metric"><span>Capacidade</span><strong>${c.capacity}</strong></div><div class="metric"><span>Total estimado</span><strong>${money(c.total)}</strong></div></div>
-      <p class="preview-note">Selecionadas: ${c.tRooms} tripla(s) + ${c.dRooms} dupla(s). Necessárias para a distribuição: ${c.tRoomsUsed} tripla(s) + ${c.dRoomsUsed} dupla(s) · ${c.n} diária(s)</p>
-      ${c.capacity > c.g ? `<p class="preview-note">Atenção: a combinação tem ${c.capacity} vagas para ${c.g} hóspedes; ${c.capacity-c.g} vaga(s) ficarão sem uso.</p>` : ''}
+      <p class="preview-note">Disponíveis: ${c.availableT} tripla(s) e ${c.availableD} dupla(s). Combinação escolhida: ${c.tRoomsUsed} tripla(s)${c.dPeople > 0 ? ` e ${c.dRoomsUsed} dupla(s)` : ''} · ${c.n} diária(s)</p>
       <table><thead><tr><th>Opção</th><th>Capacidade</th><th>Quartos</th><th>Diária/pessoa</th><th>Total/pessoa</th><th>Total/quarto*</th><th>Total do grupo</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
       <p class="preview-note">* Total por quarto considera ocupação máxima. Total do grupo considera ${c.g} hóspede(s).</p>`;
   }
@@ -237,12 +250,12 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
       <p>Segue a proposta para hospedagem corporativa de colaboradores de <b>${esc(title)}</b> na unidade <b>São Hostel – ${esc(unit)}</b>.</p>
       ${company?`<p><b>Empresa:</b> ${esc(company)}</p>`:''}${cnpj?`<p><b>CNPJ:</b> ${esc(cnpj)}</p>`:''}${contact?`<p><b>Contato:</b> ${esc(contact)}</p>`:''}
       <h2>Detalhes da estadia</h2>
-      <ul><li><b>Unidade:</b> São Hostel – ${esc(unit)}</li><li><b>Entrada:</b> ${datePt(val('checkin'))}, ${esc(val('arrival') || 'a combinar')}</li><li><b>Saída:</b> ${datePt(val('checkout'))}</li><li><b>Duração:</b> ${c.n} diária(s)</li><li><b>Ocupação:</b> ${c.g} hóspede(s)</li><li><b>Suítes necessárias:</b> ${c.tRoomsUsed} tripla(s) e ${c.dRoomsUsed} dupla(s)</li></ul>
+      <ul><li><b>Unidade:</b> São Hostel – ${esc(unit)}</li><li><b>Entrada:</b> ${datePt(val('checkin'))}, ${esc(val('arrival') || 'a combinar')}</li><li><b>Saída:</b> ${datePt(val('checkout'))}</li><li><b>Duração:</b> ${c.n} diária(s)</li><li><b>Ocupação:</b> ${c.g} hóspede(s)</li><li><b>Suítes necessárias:</b> ${c.tRoomsUsed} tripla(s)${c.dPeople > 0 ? ` e ${c.dRoomsUsed} dupla(s)` : ''}</li></ul>
       <h2>Serviços e estrutura</h2>
       <ul><li>Roupa de cama e banho, Wi-Fi e acesso à cozinha, sala de TV e área de lazer compartilhada.</li><li><b>Café da manhã:</b> não oferecemos serviço de café da manhã.</li><li><b>Limpeza e higienização:</b> troca de roupa de cama uma vez por semana e limpeza/arrumação completa do quarto duas vezes por semana.</li><li><b>Estacionamento:</b> não incluso.</li><li><b>Suíte tripla:</b> três camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li><li><b>Suíte dupla:</b> duas camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li></ul>
       <h2>Investimento estimado</h2>
       <table><thead><tr><th>Configuração</th><th>Capacidade</th><th>Quartos necessários</th><th>Diária/pessoa</th><th>Total/pessoa (${c.n} diárias)</th><th>Total/quarto (${c.n} diárias)</th><th>Total do grupo (${c.g} pessoas)</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
-      <p class="foot">Esta proposta considera a combinação de suítes selecionada conforme a disponibilidade informada. Para o cálculo do valor, os hóspedes são alocados primeiro nas suítes triplas e, em seguida, nas duplas. A tabela distingue as suítes informadas das efetivamente necessárias para acomodar o grupo. A distribuição final depende da confirmação do hostel.</p>
+      <p class="foot">Esta proposta considera a combinação de suítes selecionada conforme a disponibilidade informada. Para o cálculo do valor, os hóspedes são alocados primeiro nas suítes triplas e, em seguida, nas duplas. A tabela mostra somente os tipos de suíte efetivamente utilizados nesta combinação. A distribuição final depende da confirmação do hostel. A distribuição final depende da confirmação do hostel.</p>
       <p class="foot"><b>Total estimado da combinação:</b> ${money(c.total)}</p>
       ${includeNfe?'<p><i>Este orçamento considera a emissão de nota fiscal eletrônica (NF-e) inclusa.</i></p>':''}
       ${notes?`<p><b>Observações:</b> ${esc(notes)}</p>`:''}
@@ -265,13 +278,61 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px
     window.print();
   }
   ids.forEach(id => {
-    $(id).addEventListener('input', updatePreview);
-    $(id).addEventListener('change', updatePreview);
+    const invalidate = ['guests','tripleRooms','doubleRooms','tripleRate','doubleRate'].includes(id);
+    $(id).addEventListener('input', () => { if(invalidate) selectedCombo = null; updatePreview(); });
+    $(id).addEventListener('change', () => { if(invalidate) selectedCombo = null; updatePreview(); });
+  });
+  $('recommendBtn').addEventListener('click', () => {
+    const g = Math.max(0, parseInt(val('guests') || '0',10) || 0);
+    const tAvail = Math.max(0, parseInt(val('tripleRooms') || '0',10) || 0);
+    const dAvail = Math.max(0, parseInt(val('doubleRooms') || '0',10) || 0);
+    const tr = Math.max(0, Number(val('tripleRate') || 0)), dr = Math.max(0, Number(val('doubleRate') || 0));
+    const n = nights();
+    const box = $('recommendations');
+    box.classList.remove('hidden');
+    if(g < 1 || n < 1) {
+      box.innerHTML = '<h3>Para sugerir combinações</h3><p>Informe pelo menos um hóspede e datas válidas de entrada e saída.</p>';
+      return;
+    }
+    const combos = [];
+    for(let t=0; t<=tAvail; t++) {
+      for(let d=0; d<=dAvail; d++) {
+        const cap = t*3+d*2;
+        if(cap < g || t+d===0) continue;
+        // Only include combinations where every selected room is used, and no more than one seat per room is left empty when feasible.
+        const rooms = t+d;
+        const total = g <= t*3 ? g*tr*n : (t*3*tr + (g-t*3)*dr)*n;
+        const typeCount = (t>0?1:0)+(d>0?1:0);
+        const unusedSeats = cap-g;
+        const unusedRooms = Math.max(0, rooms - Math.ceil(g/3));
+        combos.push({t,d,cap,rooms,total,unusedSeats,unusedRooms,typeCount});
+      }
+    }
+    combos.sort((a,b)=>a.total-b.total || a.rooms-b.rooms || a.unusedSeats-b.unusedSeats);
+    const unique = combos.filter((c,i,arr)=>arr.findIndex(x=>x.t===c.t&&x.d===c.d)===i).slice(0,8);
+    if(!unique.length) {
+      box.innerHTML = '<h3>Nenhuma combinação possível</h3><p>A disponibilidade informada não comporta todos os hóspedes. Aumente a quantidade de suítes disponíveis.</p>';
+      return;
+    }
+    box.innerHTML = '<h3>Combinações recomendadas (menor custo primeiro)</h3>' + unique.map((c,i) => {
+      const label = `${c.t} tripla(s)${c.d ? ` + ${c.d} dupla(s)` : ''}`;
+      const details = `${c.rooms} quarto(s) · capacidade ${c.cap} · ${money(c.total)} no total`;
+      return `<div class="recommendation"><input type="radio" name="roomCombo" id="combo${i}" ${i===0?'checked':''} value="${i}"><label for="combo${i}"><strong>${esc(label)}${i===0?' · menor custo':''}</strong>${esc(details)}</label></div>`;
+    }).join('') + '<div class="actions" style="margin-top:10px"><button type="button" class="primary" id="applyCombo">Usar combinação selecionada</button></div>';
+    $('applyCombo').addEventListener('click', () => {
+      const selected = box.querySelector('input[name="roomCombo"]:checked');
+      if(!selected) return;
+      const combo = unique[Number(selected.value)];
+      selectedCombo = {t:combo.t,d:combo.d};
+      updatePreview();
+      box.insertAdjacentHTML('beforeend','<p class="hint">Combinação aplicada à prévia e ao PDF.</p>');
+    });
   });
   $('generatePdf').addEventListener('click', preparePrint);
   $('refreshPreview').addEventListener('click', updatePreview);
   $('reset').addEventListener('click', () => {
     if(!confirm('Limpar os dados do cliente e do período? As tarifas e as condições padrão serão mantidas.')) return;
+    selectedCombo = null;
     ['client','company','cnpj','contact','checkin','checkout','notes','customConditions'].forEach(id => $(id).value='');
     $('unit').value='Mairinque'; $('guests').value='6'; $('tripleRooms').value='2'; $('doubleRooms').value='0'; $('arrival').value='a partir das 13h';
     $('validity').value='7 dias'; $('includeNfe').checked=true;

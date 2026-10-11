@@ -19,6 +19,6 @@ Clique em **Gerar / salvar PDF**. O aplicativo monta a proposta e chama a impres
 
 - O cálculo e a montagem do documento são feitos no navegador.
 - O formulário não envia dados a um servidor nem grava automaticamente dados de clientes.
-- Unidade selecionável: Mairinque ou São Roque.
+- Unidade selecionável: Mairinque ou São Roque.\n- Informa disponibilidade de suítes triplas/duplas, sugere combinações e permite aplicar uma combinação ao orçamento.
 - Tarifas iniciais são exemplos editáveis. Confira os valores e as condições antes de enviar uma proposta.
 - A estimativa de quartos usa a capacidade máxima (triplo: 3 pessoas; duplo: 2 pessoas). A disponibilidade real precisa ser confirmada.
