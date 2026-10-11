@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#243b2d">
+<title>São Hostel | Gerador de Orçamentos</title>
+<style>
+:root{--green:#8ebc25;--dark:#243b2d;--ink:#202820;--muted:#657064;--line:#dce3d8;--bg:#f3f6f0;--white:#fff;--blue:#245a85}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--dark);color:#fff;padding:24px 16px}
+.head{max-width:1050px;margin:auto;display:flex;align-items:center;gap:14px}
+.logo{width:48px;height:48px;border-radius:13px;background:var(--green);display:grid;place-items:center;color:var(--dark);font-weight:900;font-size:21px}
+header h1{margin:0;font-size:clamp(21px,4vw,29px);letter-spacing:-.4px}
+header p{margin:4px 0 0;color:#e3eadf;font-size:13px}
+main{max-width:1050px;margin:20px auto;padding:0 14px 42px}
+.intro{margin:0 0 16px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.9fr);gap:16px;align-items:start}
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 3px 12px #17231608}
+h2{font-size:16px;color:var(--dark);margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field.full{grid-column:1/-1}
+label{display:block;font-weight:700;font-size:12px;margin-bottom:5px}
+input,select,textarea{width:100%;min-height:42px;border:1px solid #cbd5c7;border-radius:9px;padding:10px 11px;background:#fff;color:var(--ink);font:inherit}
+textarea{min-height:74px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid #b9d5f0;outline-offset:1px}
+.rategrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rate{background:#f8faf5;border:1px solid var(--line);padding:12px;border-radius:11px}
+.checkline{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px}
+.checkline input{width:18px;min-height:18px;margin:0}
+.hint{font-size:12px;color:var(--muted);margin:9px 0 0}
+button{border:0;border-radius:10px;padding:12px 15px;font:700 14px system-ui;cursor:pointer}
+.primary{background:var(--green);color:#1f2c19}
+.secondary{background:#edf1e9;color:var(--dark);border:1px solid var(--line)}
+.actions{display:flex;flex-wrap:wrap;gap:9px}
+.sticky{position:sticky;top:12px}
+.preview-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.preview-top h2{margin:0}
+.status{font-size:11px;border-radius:99px;background:#edf5df;color:#375519;padding:5px 9px;font-weight:700}
+.preview{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+.preview h3{margin:0 0 4px;color:var(--dark);font-size:17px}
+.preview .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:13px}
+.metric{background:#f4f7f0;border-radius:9px;padding:10px}
+.metric span{display:block;font-size:11px;color:var(--muted)}
+.metric strong{display:block;margin-top:3px;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:12px;margin:10px 0}
+th,td{border:1px solid #d5ddd1;padding:8px;text-align:left;vertical-align:top}
+th{background:#edf2e8}
+.total{font-weight:800;color:var(--dark)}
+.preview-note{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 10px 20px}
+#proposalPrint{display:none}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.sticky{position:static}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:390px){.summary{grid-template-columns:1fr}.actions button{width:100%}}
+/* A impressão mostra somente o orçamento, nunca os campos internos do gerador. */
+@page{size:A4;margin:15mm 14mm}
+@media print{
+  body{background:#fff!important;color:#222;font:10pt/1.4 Arial,Helvetica,sans-serif}
+  body>*{display:none!important}
+  #proposalPrint{display:block!important}
+  #proposalPrint h1{font-size:17pt;text-align:center;color:#263d25;margin:0 0 16pt}
+  #proposalPrint h2{font-size:12pt;border-bottom:1px solid #999;padding-bottom:4pt;margin:16pt 0 7pt}
+  #proposalPrint p{margin:6pt 0}
+  #proposalPrint table{font-size:8.5pt;margin:9pt 0}
+  #proposalPrint th,#proposalPrint td{border:1px solid #aaa;padding:6pt}
+  #proposalPrint th{background:#edf2e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #proposalPrint ul{padding-left:18pt;margin:5pt 0}
+  #proposalPrint li{margin:3pt 0}
+  #proposalPrint .foot{font-size:8.5pt}
+  #proposalPrint .keep{break-inside:avoid;page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div class="logo" aria-hidden="true">SH</div>
+    <div><h1>São Hostel | Gerador de Orçamentos</h1><p>Propostas de hospedagem corporativa • PDF pelo navegador</p></div>
+  </div>
+</header>
+<main>
+  <p class="intro">Preencha os dados e confira a prévia. O documento é montado neste aparelho; os dados não são enviados para um servidor.</p>
+  <div class="layout">
+    <div>
+      <form id="quoteForm">
+        <section class="card">
+          <h2>1. Cliente e unidade</h2>
+          <div class="grid">
+            <div class="field"><label for="client">Nome do contato *</label><input id="client" required placeholder="Pessoa responsável"></div>
+            <div class="field"><label for="company">Empresa / razão social</label><input id="company" placeholder="Nome da empresa"></div>
+            <div class="field"><label for="cnpj">CNPJ</label><input id="cnpj" placeholder="00.000.000/0000-00" inputmode="numeric"></div>
+            <div class="field"><label for="contact">Telefone / e-mail</label><input id="contact" placeholder="Contato para retorno"></div>
+            <div class="field"><label for="unit">Unidade São Hostel *</label><select id="unit" required><option value="Mairinque">Mairinque</option><option value="São Roque">São Roque</option></select></div>
+            <div class="field"><label for="validity">Validade do orçamento</label><input id="validity" value="7 dias"></div>
+          </div>
+        </section>
+        <section class="card">
+          <h2>2. Período e ocupação</h2>
+          <div class="grid">
+            <div class="field"><label for="checkin">Data de entrada *</label><input id="checkin" type="date" required></div>
+            <div class="field"><label for="checkout">Data de saída *</label><input id="checkout" type="date" required></div>
+            <div class="field"><label for="guests">Quantidade de hóspedes *</label><input id="guests" type="number" min="1" step="1" value="6" required></div>
+            <div class="field"><label for="arrival">Horário de entrada</label><input id="arrival" value="a partir das 13h"></div>
+            <div class="field full"><label for="notes">Observações do orçamento</label><textarea id="notes" placeholder="Ex.: horário previsto de chegada, necessidade de nota fiscal..."></textarea></div>
+          </div>
+          <p class="hint">As diárias são calculadas pela diferença entre entrada e saída. A saída precisa ser posterior à entrada.</p>
+        </section>
+        <section class="card">
+          <h2>3. Tarifas por pessoa / diária</h2>
+          <div class="rategrid">
+            <div class="rate"><label for="tripleRate">Suíte tripla (R$ por pessoa/noite)</label><input id="tripleRate" type="number" min="0" step="0.01" value="65"></div>
+            <div class="rate"><label for="doubleRate">Suíte dupla (R$ por pessoa/noite)</label><input id="doubleRate" type="number" min="0" step="0.01" value="85"></div>
+          </div>
+          <label class="checkline"><input id="includeNfe" type="checkbox" checked> Informar que a NF-e está inclusa</label>
+          <p class="hint">Tarifas editáveis: revise os valores antes de emitir cada proposta.</p>
+        </section>
+        <section class="card">
+          <h2>4. Pagamento e condições</h2>
+          <div class="grid">
+            <div class="field"><label for="pix">PIX (CNPJ)</label><input id="pix" value="60.123.979/0001-17"></div>
+            <div class="field"><label for="cardTerms">Condição do cartão</label><input id="cardTerms" value="Crédito em 1x sem juros; débito à vista"></div>
+            <div class="field full"><label for="customConditions">Condições adicionais</label><textarea id="customConditions" placeholder="Condições específicas desta proposta (opcional)"></textarea></div>
+          </div>
+        </section>
+        <section class="card">
+          <h2>5. Gerar PDF</h2>
+          <div class="actions">
+            <button type="button" class="primary" id="generatePdf">Gerar / salvar PDF</button>
+            <button type="button" class="secondary" id="refreshPreview">Atualizar prévia</button>
+            <button type="button" class="secondary" id="reset">Limpar dados</button>
+          </div>
+          <p class="hint">O botão abre a impressão nativa do navegador. Escolha “Salvar como PDF” ou, no iPhone, use a opção de compartilhar/salvar disponível na tela de impressão. Não usa biblioteca externa.</p>
+        </section>
+      </form>
+    </div>
+    <aside class="card sticky">
+      <div class="preview-top"><h2>Prévia do orçamento</h2><span class="status" id="previewStatus">Aguardando datas</span></div>
+      <div class="preview" id="preview">
+        <h3>São Hostel</h3><p class="sub">A prévia aparecerá aqui quando você preencher as datas.</p>
+      </div>
+      <p class="hint">Confira unidade, período, quantidade de hóspedes e tarifas antes de gerar o PDF.</p>
+    </aside>
+  </div>
+</main>
+<footer>São Hostel • Gerador local de orçamento</footer>
+<section id="proposalPrint" aria-hidden="true"></section>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const ids = ['client','company','cnpj','contact','unit','validity','checkin','checkout','guests','arrival','notes','tripleRate','doubleRate','includeNfe','pix','cardTerms','customConditions'];
+  const val = id => String($(id).value || '').trim();
+  const money = n => Number(n || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const datePt = s => { if(!s) return ''; const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
+  const nights = () => {
+    const a = val('checkin'), b = val('checkout');
+    if(!a || !b) return 0;
+    return Math.round((Date.parse(b+'T12:00:00') - Date.parse(a+'T12:00:00')) / 86400000);
+  };
+  function calc(){
+    const g = Math.max(0, parseInt(val('guests') || '0',10) || 0);
+    const n = nights(), tr = Math.max(0, Number(val('tripleRate') || 0)), dr = Math.max(0, Number(val('doubleRate') || 0));
+    return {g,n,tr,dr,tRooms:Math.ceil(g/3),dRooms:Math.ceil(g/2),tPerson:tr*n,tRoom:tr*3*n,tGroup:tr*n*g,dPerson:dr*n,dRoom:dr*2*n,dGroup:dr*n*g};
+  }
+  function tableRows(c){
+    return `<tr><td><b>Suíte tripla</b></td><td>Até 3 pessoas</td><td>${c.tRooms}</td><td>${money(c.tr)}</td><td>${money(c.tPerson)}</td><td>${money(c.tRoom)}</td><td class="total">${money(c.tGroup)}</td></tr>
+    <tr><td><b>Suíte dupla</b></td><td>Até 2 pessoas</td><td>${c.dRooms}</td><td>${money(c.dr)}</td><td>${money(c.dPerson)}</td><td>${money(c.dRoom)}</td><td class="total">${money(c.dGroup)}</td></tr>`;
+  }
+  function updatePreview(){
+    const c = calc();
+    if(!val('checkin') || !val('checkout') || c.n < 1 || c.g < 1){
+      $('previewStatus').textContent = 'Confira os dados';
+      $('preview').innerHTML = `<h3>São Hostel • ${esc(val('unit'))}</h3><p class="sub">Preencha datas válidas e a quantidade de hóspedes para calcular a proposta.</p>`;
+      return;
+    }
+    $('previewStatus').textContent = `${c.n} diária(s)`;
+    $('preview').innerHTML = `<h3>Orçamento • São Hostel ${esc(val('unit'))}</h3>
+      <p class="sub">${esc(val('company') || val('client') || 'Cliente')} · ${datePt(val('checkin'))} a ${datePt(val('checkout'))}</p>
+      <div class="summary"><div class="metric"><span>Hóspedes</span><strong>${c.g}</strong></div><div class="metric"><span>Diárias</span><strong>${c.n}</strong></div><div class="metric"><span>Validade</span><strong>${esc(val('validity') || '7 dias')}</strong></div></div>
+      <table><thead><tr><th>Opção</th><th>Capacidade</th><th>Quartos</th><th>Diária/pessoa</th><th>Total/pessoa</th><th>Total/quarto*</th><th>Total do grupo</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
+      <p class="preview-note">* Total por quarto considera ocupação máxima. Total do grupo considera ${c.g} hóspede(s).</p>`;
+  }
+  function buildProposal(){
+    const c = calc();
+    if(!$('quoteForm').reportValidity()) return false;
+    if(!val('checkin') || !val('checkout')){ alert('Preencha as datas de entrada e saída.'); return false; }
+    if(c.n < 1){ alert('A data de saída precisa ser posterior à data de entrada.'); $('checkout').focus(); return false; }
+    if(c.g < 1){ alert('Informe pelo menos um hóspede.'); $('guests').focus(); return false; }
+    const client=val('client'), company=val('company'), cnpj=val('cnpj'), contact=val('contact'), unit=val('unit');
+    const title = company || client || 'Cliente';
+    const notes = val('notes'), custom = val('customConditions');
+    const includeNfe = $('includeNfe').checked;
+    const dateMade = new Date().toLocaleDateString('pt-BR');
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Orçamento São Hostel</title></head><body>
+      <h1>ORÇAMENTO DE ESTADIA • SÃO HOSTEL</h1>
+      <p>Data de emissão: ${dateMade}</p>
+      <p>Prezado(a) ${esc(client || 'responsável')},</p>
+      <p>Segue a proposta para hospedagem corporativa de colaboradores de <b>${esc(title)}</b> na unidade <b>São Hostel – ${esc(unit)}</b>.</p>
+      ${company?`<p><b>Empresa:</b> ${esc(company)}</p>`:''}${cnpj?`<p><b>CNPJ:</b> ${esc(cnpj)}</p>`:''}${contact?`<p><b>Contato:</b> ${esc(contact)}</p>`:''}
+      <h2>Detalhes da estadia</h2>
+      <ul><li><b>Unidade:</b> São Hostel – ${esc(unit)}</li><li><b>Entrada:</b> ${datePt(val('checkin'))}, ${esc(val('arrival') || 'a combinar')}</li><li><b>Saída:</b> ${datePt(val('checkout'))}</li><li><b>Duração:</b> ${c.n} diária(s)</li><li><b>Ocupação:</b> ${c.g} hóspede(s)</li></ul>
+      <h2>Serviços e estrutura</h2>
+      <ul><li>Roupa de cama e banho, Wi-Fi e acesso à cozinha, sala de TV e área de lazer compartilhada.</li><li><b>Café da manhã:</b> não oferecemos serviço de café da manhã.</li><li><b>Limpeza e higienização:</b> troca de roupa de cama uma vez por semana e limpeza/arrumação completa do quarto duas vezes por semana.</li><li><b>Estacionamento:</b> não incluso.</li><li><b>Suíte tripla:</b> três camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li><li><b>Suíte dupla:</b> duas camas de solteiro, mesa, cadeira, cabideiro e smart TV.</li></ul>
+      <h2>Investimento estimado</h2>
+      <table><thead><tr><th>Configuração</th><th>Capacidade</th><th>Quartos necessários</th><th>Diária/pessoa</th><th>Total/pessoa (${c.n} diárias)</th><th>Total/quarto (${c.n} diárias)</th><th>Total do grupo (${c.g} pessoas)</th></tr></thead><tbody>${tableRows(c)}</tbody></table>
+      <p class="foot">Os valores representam alternativas de acomodação. A quantidade de quartos é uma estimativa matemática baseada na capacidade máxima; a distribuição final depende da disponibilidade e confirmação do hostel.</p>
+      ${includeNfe?'<p><i>Este orçamento considera a emissão de nota fiscal eletrônica (NF-e) inclusa.</i></p>':''}
+      ${notes?`<p><b>Observações:</b> ${esc(notes)}</p>`:''}
+      <h2>Pagamento e condições de reserva</h2>
+      <p><b>Efetivação da reserva:</b> a reserva é garantida mediante pagamento do valor correspondente ao período desejado ou de sinal previamente combinado. A disponibilidade não é garantida até a efetivação da reserva.</p>
+      <ul><li><b>PIX (CNPJ):</b> ${esc(val('pix'))}</li><li><b>Cartões:</b> ${esc(val('cardTerms') || 'Condição a combinar')}</li></ul>
+      ${custom?`<p><b>Condições adicionais:</b> ${esc(custom)}</p>`:''}
+      <p><b>Validade da proposta:</b> ${esc(val('validity') || '7 dias')} a partir da emissão.</p>
+      <p>Ficamos à disposição para esclarecimentos e confirmação da reserva.</p><p>Atenciosamente,</p><p><b>Equipe São Hostel</b></p>
+    </body></html>`;
+  }
+  function preparePrint(){
+    const proposal = buildProposal();
+    if(!proposal) return;
+    const parsed = new DOMParser().parseFromString(proposal,'text/html');
+    $('proposalPrint').innerHTML = parsed.body.innerHTML;
+    $('proposalPrint').setAttribute('aria-hidden','false');
+    updatePreview();
+    // Print runs in the same tab: no popup and no external PDF library.
+    window.print();
+  }
+  ids.forEach(id => {
+    $(id).addEventListener('input', updatePreview);
+    $(id).addEventListener('change', updatePreview);
+  });
+  $('generatePdf').addEventListener('click', preparePrint);
+  $('refreshPreview').addEventListener('click', updatePreview);
+  $('reset').addEventListener('click', () => {
+    if(!confirm('Limpar os dados do cliente e do período? As tarifas e as condições padrão serão mantidas.')) return;
+    ['client','company','cnpj','contact','checkin','checkout','notes','customConditions'].forEach(id => $(id).value='');
+    $('unit').value='Mairinque'; $('guests').value='6'; $('arrival').value='a partir das 13h';
+    $('validity').value='7 dias'; $('includeNfe').checked=true;
+    updatePreview();
+  });
+  window.addEventListener('afterprint', () => $('proposalPrint').setAttribute('aria-hidden','true'));
+  updatePreview();
+})();
+</script>
+</body>
+</html>
